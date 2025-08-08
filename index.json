@@ -1,0 +1,57 @@
+[
+{
+	"uri": "http://localhost:1313/1-introduce/",
+	"title": "Giới thiệu",
+	"tags": [],
+	"description": "",
+	"content": "Automated Budget Management với Alerting và Controls, trong môi trường điện toán đám mây, việc kiểm soát chi phí và sử dụng tài nguyên hiệu quả là yếu tố then chốt để tối ưu ngân sách. Đề tài này tập trung vào việc triển khai hệ thống quản lý ngân sách thông minh trên nền tảng AWS, kết hợp các dịch vụ như AWS Budgets, Lambda, DynamoDB, SNS.\nHệ thống được thiết kế với các mục tiêu chính:\nThiết lập ngân sách và cảnh báo dự đoán (AWS Budgets + SNS)\nTạo Lambda function tự động phản hồi ngân sách (stopResourcesIfOverBudget)\nGhi log ngân sách vượt ngưỡng vào DynamoDB\nCấu hình IAM Role và gán Policy cho Lambda\n"
+},
+{
+	"uri": "http://localhost:1313/",
+	"title": "Pipeline DevOps",
+	"tags": [],
+	"description": "",
+	"content": "Triển khai quản lý ngân sách thông minh với cảnh báo dự đoán, kiểm soát tự động, phân tích phương sai Tổng quan Trong bài lab này, bạn sẽ tìm hiểu các khái niệm cơ bản và thực hành về tự động hóa ngân sách, cảnh báo dự đoán, cơ chế kiểm soát, phân tích phương sai, phát triển bảng điều khiển, quy trình hoạt động, quy trình leo thang, dự báo chi phí.\nNội dung Giới thiệu Các bước chuẩn bị Kiểm soát tự động bằng AWS LAMBDA Ghi log vào DynamoDB khi vượt ngân sách Dọn dẹp tài nguyên "
+},
+{
+	"uri": "http://localhost:1313/2-prerequiste/",
+	"title": "Tạo ngân sách &amp; cảnh báo dự đoán",
+	"tags": [],
+	"description": "",
+	"content": "Tạo ngân sách \u0026amp; cảnh báo dự đoán Trong bước này chúng ta sẽ tiến hành thiết lập ngân sách và cảnh báo dự đoán\nVào AWS Console. Trên thanh tìm kiếm, gõ Budgets và chọn Billing and Cost Management → Budgets. Click Create budget. Đặt tên lịch: •\tStopEC2-DailyScheduler → dễ nhớ và đúng chức năng. Vào Amazon EventBridge \u0026gt; Scheduler. Chọn \u0026ldquo;Create schedule\u0026rdquo;. Đặt mức cảnh báo (Configure alerts) Vào AWS Budgets Vào AWS Console → tìm AWS Budgets → bấm Create budget → chọn Cost budget.\nNhập thông tin ngân sách Đặt tên ngân sách (ví dụ: EC2Budget)\nChọn thời gian: Monthly\nNhập số tiền giới hạn (ví dụ: $100)\nChọn dịch vụ cần theo dõi (VD: Amazon EC2), hoặc để mặc định là tất cả.\nĐặt cảnh báo Chọn Forecasted (dự đoán) → nhập 80%\nNhập email muốn nhận cảnh báo\nChọn SNS Topic (hoặc tạo mới)\nAWS sẽ gửi cảnh báo khi dự đoán chi tiêu vượt 80% ngân sách.\nXác nhận email (lần đầu) AWS sẽ gửi email yêu cầu xác nhận → bạn phải bấm Confirm subscription để nhận được cảnh báo.\nGửi email khi EC2 bị dừng\nTriển khai tự động dừng EC2 khi vượt ngân sách Hoàn tất\nNhấn Next → kiểm tra lại thông tin → bấm Create budget\nThiết lập ngân sách cơ bản (Set up your budget), xem lại và hoàn tất (Review \u0026amp; Save) + Kết quả sau khi lưu. Cảnh báo khi vượt 80% ngân sách, gửi email và SNS Trong AWS Budgets, khi cấu hình Alert: Threshold: 80%\nNotification Type: Forecasted\nRecipients: nhập email\nSNS Topic: chọn BudgetAlertTopic\nTrong SNS: Đảm bảo có 2 subscriptions:\nEmail (Protocol: Email → confirm email khi nhận được).\nLambda (Protocol: AWS Lambda → function stopResourcesIfOverBudget).\nKhi vượt 80%, hệ thống sẽ: Gửi email cảnh báo.\nGửi SNS message đến Lambda để ghi log hoặc dừng EC2..\nTạo topic SNS để nhận cảnh báo Vào Amazon SNS \u0026gt; Create topic\n•\tType: Standard\n•\tName: ec2-shutdown-approval\n•\tNote lại ARN của topic Kiểm tra gắn hành động với cảnh báo Nhấn “Add action” bên dưới phần “Alert #1”. Chọn dịch vụ: Ví dụ EC2 hoặc RDS.\nChọn hành động: → Với EC2: chọn “Stop Instances”.\n→ Với RDS: chọn “Stop DB Instance”.\nChọn resource cụ thể (ID của EC2 instance bạn muốn dừng).\nGán IAM Role đã tạo trước (để cho phép Budget thực hiện hành động).\nXác nhận và lưu.\n"
+},
+{
+	"uri": "http://localhost:1313/4-s3log/",
+	"title": "Kiểm soát tự động bằng AWS LAMBDA",
+	"tags": [],
+	"description": "",
+	"content": "Kiểm soát tự động bằng AWS LAMBDA Tạo IAM Role cho Lambda. Vào IAM \u0026gt; Roles \u0026gt; Create role Trusted entity: Chọn AWS service\nUse case: Chọn Lambda\nGán 2 policy:\n•\tAmazonEC2FullAccess → để dừng EC2\n•\tCloudWatchReadOnlyAccess → để đọc thông tin giám sát ngân sách\nĐặt tên role: LambdaBudgetEnforcerRole\nBấm Create Role → hoàn tất\nTạo hàm Lambda mới Truy cập AWS Lambda Console. Nhấn \u0026ldquo;Create function\u0026rdquo;.\nChọn Author from scratch.\nĐiền thông tin:\nFunction name: stopEC2WhenOverBudget\nRuntime: Python 3.12\nPermissions: → Chọn: \u0026ldquo;Create a new role with basic Lambda permissions\u0026rdquo;\nNhấn Create function. Cập nhật code cho hàm Lambda stopResourcesIfOverBudget Vào Lambda \u0026gt; chọn function stopResourcesIfOverBudget\nChọn tab “Code” \u0026gt; chỉnh sửa nội dung function\nNhấn “Deploy” để cập nhật\nHiện thông báo “Successfully updated” là xong Test thủ công lại Lambda function\nVào AWS Lambda Console\n→ Chọn function stopResourcesIfOverBudget\nChuyển sang tab \u0026quot;Test\u0026quot; (gần nút Deploy) Tạo 1 test event o\tClick Configure test event\no\tEvent name: test-budget-check\no\tEvent JSON:\nNhấn \u0026quot;Test\u0026quot; để chạy hàm. Chọn IAM Role cho Lambda Khi tạo Lambda Ở phần Permissions, chọn:\n\u0026ldquo;Create a new role with basic Lambda permissions\u0026rdquo;\nĐể thêm quyền dừng EC2 Vào Lambda Console \u0026gt; hàm của bạn \u0026gt; Tab Permissions\nNhấn vào Role name\nTrong trang IAM Role:\nNhấn \u0026ldquo;Add permissions\u0026rdquo; \u0026gt; \u0026ldquo;Attach policies\u0026rdquo;\nTìm và tick chọn:\nAmazonEC2FullAccess\n\u0026ldquo;Nhấn Add permissions\u0026rdquo;\nLambda đã tạo thành công + Viết mã Lambda để dừng EC2\nTriển khai Lambda tự động dừng EC2 Tạo test event cho Lambda Thiết lập EventBridge rule Vào Amazon EventBridge → chọn \u0026ldquo;Scheduler\u0026rdquo;. Nhấn \u0026ldquo;Create schedule\u0026rdquo;.\nĐặt tên lịch, ví dụ: StopEC2-DailyScheduler.\nSchedule pattern: chọn Recurring → chọn Daily.\nTarget: chọn Lambda function → chọn hàm stopResourcesIfOverBudget.\nRole: dùng role mặc định hoặc tạo mới nếu cần.\nNhấn \u0026ldquo;Create schedule\u0026rdquo; để hoàn tất. Thiết lập EventBridge rule Tạo lịch kích hoạt Lambda hằng ngày\nSchedule detail:\nTên: TriggerLambdaDaily\nMô tả: Kích hoạt Lambda dừng EC2 nếu vượt ngân sách\nLặp lại: Hằng ngày lúc 09:00 (UTC+7)\nBiểu thức cron: 0 9 * * ? *\nTarget detail:\nGắn hàm Lambda cần chạy\nBấm \u0026ldquo;Create schedule\u0026rdquo; để hoàn tất\nHiển thị thông tin chi tiết về lịch “TriggerLambdaDaily” Quản lý SNS Topic kiểu FIFO cho cảnh báo chi tiêu vượt ngân sách Hiển thị chi tiết cấu hình Subscription cho Topic cảnh báo ngân sách Tạo lịch tự động với EventBridge Schedule name: Nhập tên lịch, ví dụ: StopEC2-DailyScheduler Description (tùy chọn):\nMô tả nội dung lịch (có thể bỏ qua)\nSchedule group:\nGiữ nguyên default hoặc tạo nhóm riêng nếu muốn.\nSchedule pattern:\no\tChọn Recurring schedule (lặp lại theo lịch)\no\tChọn múi giờ phù hợp, ví dụ: Asia/Ho_Chi_Minh\nMở phần cấu hình IAM Role Truy cập Lambda \u0026gt; chọn function stopResourcesIfOverBudget Chọn tab Configuration (nằm ở giữa bên dưới thanh tiêu đề)\nTrong menu bên trái, chọn Permissions\nỞ mục Execution role, bạn sẽ thấy một dòng tên Role màu xanh (ví dụ: lambda-role-abcxyz) → Click vào tên Role đó, AWS sẽ mở tab IAM mới. Gắn policy AmazonEC2FullAccess Trong trang IAM Role, kéo xuống phần Permissions policies\nNhấn nút Add permissions \u0026gt; chọn Attach policies\nỞ ô tìm kiếm, gõ: AmazonEC2FullAccess\nTick chọn vào dòng đó\nNhấn Next: Review → sau đó nhấn Add permissions Tạo Eventbridge Scheduler Truy cập AWS Console. Vào dịch vụ Amazon EventBridge.\nỞ menu bên trái, chọn Scheduler.\nNhấn \u0026ldquo;Create schedule\u0026rdquo;. Target Ở phần Target, chọn \u0026ldquo;AWS Lambda\u0026rdquo;. Nhấn \u0026ldquo;Select\u0026rdquo; và chọn hàm Lambda stopResourcesIfOverBudget.\nTrong Payload, nhập nội dung hành động cần thực hiện Nhấn \u0026ldquo;Next\u0026rdquo; để sang bước tiếp theo. Settings – optional Schedule state: → Bật lịch ngay (tick Enable).\nExecution role:\n→ Chọn Create new role .\nAction after completion:\n→ Chọn NONE .\nRetry policy:\n→ Max age: 2h 30m\n→ Retry: 1 lần nếu lỗi.\nDLQ (Dead-letter queue):\n→ None (không cần hàng chờ lỗi).\nEncryption:\n→ Dùng mặc định aws/scheduler . Sau khi nhấn \u0026ldquo;Create schedule\u0026rdquo; AWS sẽ tạo một EventBridge Scheduler.\nVào đúng thời gian bạn đã chọn, nó sẽ gọi Lambda function stopResourcesIfOverBudget.\nLambda sẽ thực hiện hành động (ví dụ: dừng EC2 nếu vượt ngân sách). Kết quả Chỉnh sửa nội dung hàm Lambda và triển khai Vào trang tạo policy Trong Service, gõ và chọn SNS Tick vào hành động Publish\nBấm vào “Add ARN” tại phần “Resources”\nỞ phần:\n•\tRegion: ap-southeast-1\n•\tAccount: 863690437968\n•\tTopic Name: ec2-shutdown-approval\nBấm Add •\tBấm Next •\tĐặt tên policy: AllowLambdaSNSPublish •\tBấm Create policy Kết quả Đăng ký nhận email phê duyệt qua SNS Subscribe email •\tVào SNS \u0026gt; topic bạn vừa tạo \u0026gt; Create subscription\n•\tProtocol: Email\n•\tEndpoint: Nhập email bạn muốn gửi phê duyệt (của bạn chẳng hạn)\n•\tAWS sẽ gửi một email để bạn xác nhận → Bắt buộc phải bấm Confirm Gán quyền gửi thông báo SNS cho Lambda Vào IAM \u0026gt; Roles\nTìm role của Lambda: stopResourcesIfOverBudget-role-xxxxx\nClick role → chọn Attach policies\nChọn AllowLambdaSNSPublish → Bấm Attach policy "
+},
+{
+	"uri": "http://localhost:1313/5-portfwd/",
+	"title": "Ghi log vào DynamoDB khi vượt ngân sách",
+	"tags": [],
+	"description": "",
+	"content": "Ghi log vào DynamoDB khi vượt ngân sách Ghi log vào DynamoDB khi EC2 bị dừng Tạo DynamoDB Table •\tVào DynamoDB → Tables → Create table\n•\tNhập:\no\tTable name: EC2ShutdownLogs\no\tPartition key: InstanceId (type: String)\no\tSort key: Timestamp (type: String)\n•\tChọn On-demand capacity\nSửa Lambda function stopResourcesIfOverBudget để ghi log Update IAM Role của Lambda Đảm bảo role stopResourcesIfOverBudget-role-\u0026hellip; có quyền ghi vào DynamoDB: Vào IAM \u0026gt; Roles \u0026gt; [Tên role của Lambda] \u0026gt; Add permissions → Attach policy:\n•\tChọn Create inline policy\nCập nhật code Lambda để ghi log vào DynamoDB Ghi phân tích sai lệch ngân sách vào DynamoDB Tạo bảng DynamoDB để lưu sai lệch ngân sách Vào DynamoDB Console → chọn Create table:\nGhi log từ Lambda vào DynamoDB Trong Lambda function stopResourcesIfOverBudget, import thêm boto3 và thêm đoạn sau vào cuối: Gán quyền ghi DynamoDB cho Lambda Vào IAM \u0026gt; Roles \u0026gt; LambdaBudgetEnforcerRole Add permissions \u0026gt; Create inline policy:\n•\tChọn tab JSON\nReview policy → đặt tên: AllowPutBudgetLogs "
+},
+{
+	"uri": "http://localhost:1313/6-cleanup/",
+	"title": "Dọn dẹp tài nguyên  ",
+	"tags": [],
+	"description": "",
+	"content": "Chúng ta sẽ tiến hành các bước sau để xóa các tài nguyên chúng ta đã tạo trong bài thực hành này.\nXóa DynamoDB Truy cập DynamoDB Chọn Table đã tạo. Chọn Delete Table Xóa SNS Truy cập SNS Chọn SNS đã tạo. Chọn Delete. Xóa IAM Truy cập vào IAM Chọn IAM Chọn Delete. Xóa EventBridge Truy cập vào EventBridge Chọn EventBridge rule Chọn Delete. "
+},
+{
+	"uri": "http://localhost:1313/categories/",
+	"title": "Categories",
+	"tags": [],
+	"description": "",
+	"content": ""
+},
+{
+	"uri": "http://localhost:1313/tags/",
+	"title": "Tags",
+	"tags": [],
+	"description": "",
+	"content": ""
+}]
